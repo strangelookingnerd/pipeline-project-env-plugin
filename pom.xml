@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <version>4.29</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.jenkins.plugins</groupId>
+    <artifactId>pipeline-project-env</artifactId>
+    <version>${revision}</version>
+    <packaging>hpi</packaging>
+
+    <name>Pipeline Project-Env Plugin</name>
+    <description>This plugin allows you to use Project-Env within Jenkins pipelines</description>
+    <url>https://github.com/Project-Env/project-env-jenkins-plugin/blob/master/README.md</url>
+    <licenses>
+        <license>
+            <name>The MIT license</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <properties>
+        <revision>dev</revision>
+
+        <jenkins.version>2.303.2</jenkins.version>
+        <project-env-commons.version>1.1.0</project-env-commons.version>
+        <immutable.version>2.8.8</immutable.version>
+
+        <java.level>8</java.level>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.jenkins.tools.bom</groupId>
+                <artifactId>bom-2.303.x</artifactId>
+                <version>950.v396cb834de1e</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.projectenv.commons</groupId>
+            <artifactId>process</artifactId>
+            <version>${project-env-commons.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.projectenv.commons</groupId>
+            <artifactId>archive</artifactId>
+            <version>${project-env-commons.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.projectenv.commons</groupId>
+            <artifactId>string-substitutor</artifactId>
+            <version>${project-env-commons.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.projectenv.commons</groupId>
+            <artifactId>gson</artifactId>
+            <version>${project-env-commons.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.immutables</groupId>
+            <artifactId>value</artifactId>
+            <version>${immutable.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.immutables</groupId>
+            <artifactId>gson</artifactId>
+            <version>${immutable.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-step-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-cps</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-durable-task-step</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-job</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>releases.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/releases/</url>
+        </repository>
+        <repository>
+            <id>public.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </repository>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/Project-Env/project-env-commons-java</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>releases.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/releases/</url>
+        </pluginRepository>
+        <pluginRepository>
+            <id>public.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+</project>
