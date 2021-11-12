@@ -1,49 +1,59 @@
 package io.jenkins.plugins.projectenv;
 
 import hudson.EnvVars;
-import io.projectenv.core.commons.archive.ArchiveExtractorFactory;
-import io.projectenv.core.commons.download.DownloadUrlDictionary;
-import io.projectenv.core.commons.download.DownloadUrlSubstitutorFactory;
-import io.projectenv.core.commons.download.ImmutableDownloadUrlDictionary;
-import io.projectenv.core.commons.process.ProcessHelper;
-import io.projectenv.core.commons.process.ProcessResult;
-import io.projectenv.core.commons.system.CPUArchitecture;
-import io.projectenv.core.commons.system.OperatingSystem;
-import org.apache.commons.io.FileUtils;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.Launcher.ProcStarter;
+import hudson.Util;
+import io.jenkins.plugins.projectenv.context.OperatingSystem;
+import io.jenkins.plugins.projectenv.context.StepContextHelper;
+import io.jenkins.plugins.projectenv.proc.ProcHelper;
+import io.jenkins.plugins.projectenv.proc.ProcResult;
+import io.jenkins.plugins.projectenv.toolinfo.ToolInfo;
+import io.jenkins.plugins.projectenv.toolinfo.ToolInfoParser;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
 import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
 import org.jenkinsci.plugins.workflow.steps.GeneralNonBlockingStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import javax.annotation.Nonnull;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
+import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
+import java.util.UUID;
 
 public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution {
 
-    private static final Logger LOGGER = Logger.getLogger(WithProjectEnvStepExecution.class.getName());
+    private static final String PROJECT_ENV_CLI_DOWNLOAD_PATTERN = "https://github.com/Project-Env/project-env-core/releases/download/v{0}/cli-{0}-{1}-{2}.{3}";
+
+    private static final String CLI_ARCHIVE_EXTENSION_TAR_GZ = "tar.gz";
+    private static final String CLI_ARCHIVE_EXTENSION_ZIP = "zip";
+
+    private static final String CLI_EXECUTABLE_FILE_NAME = "project-env-cli";
+
+    private static final String CLI_EXECUTABLE_FILE_EXTENSION_WINDOWS = ".exe";
+    private static final String CLI_EXECUTABLE_FILE_EXTENSION_OTHERS = StringUtils.EMPTY;
+
+    private static final String CLI_TARGET_OS_WINDOWS = "windows";
+    private static final String CLI_TARGET_OS_MACOS = "macos";
+    private static final String CLI_TARGET_OS_LINUX = "linux";
+
+    private static final String CLI_TARGET_ARCH_AMD_64 = "amd64";
 
     private final String cliVersion;
     private final boolean cliDebug;
+    private final String configFile;
 
-    public WithProjectEnvStepExecution(StepContext stepContext, String cliVersion, boolean cliDebug) throws IOException, InterruptedException {
+    public WithProjectEnvStepExecution(StepContext stepContext, String cliVersion, boolean cliDebug, String configFile) {
         super(stepContext);
 
         this.cliVersion = cliVersion;
         this.cliDebug = cliDebug;
+        this.configFile = configFile;
     }
 
     @Override
@@ -53,99 +63,91 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
     }
 
     private void execute() throws Exception {
-        File tempDir = createTempDirectory("project-env");
+        FilePath temporaryDirectory = createTemporaryDirectory();
 
-        File archive = downloadProjectEnvCliArchive(tempDir);
-        extractProjectEnvCliArchive(archive, tempDir);
+        FilePath projectEnvCliArchive = downloadProjectEnvCliArchive(temporaryDirectory);
+        extractProjectEnvCliArchive(projectEnvCliArchive, temporaryDirectory);
 
-        File executable = resolveProjectEnvCliExecutable(tempDir);
+        FilePath executable = resolveProjectEnvCliExecutable(temporaryDirectory);
         Map<String, List<ToolInfo>> allToolInfos = executeProjectEnvCli(executable);
 
         EnvVars projectEnvVars = processToolInfos(allToolInfos);
-        BodyExecutionCallback callback = createTempDirectoryCleanupCallback(tempDir);
+        BodyExecutionCallback callback = createTempDirectoryCleanupCallback(temporaryDirectory);
 
         invokeBodyWithEnvVarsAndCallback(projectEnvVars, callback);
     }
 
-    private File createTempDirectory(String name) throws IOException {
-        File temporaryFolder = File.createTempFile(name, StringUtils.EMPTY, null);
-        FileUtils.forceDelete(temporaryFolder);
-        FileUtils.forceMkdir(temporaryFolder);
+    private FilePath createTemporaryDirectory() throws Exception {
+        FilePath temporaryDirectoryRoot = StepContextHelper.getTemporaryDirectory(getContext());
+        String temporaryDirectoryName = generateTemporaryDirectoryName();
 
-        return temporaryFolder;
+        return temporaryDirectoryRoot.child(temporaryDirectoryName);
     }
 
-    private File downloadProjectEnvCliArchive(File targetDirectory) throws IOException, URISyntaxException {
+    private String generateTemporaryDirectoryName() {
+        return "withProjectEnv" + Util.getDigestOf(UUID.randomUUID().toString()).substring(0, 8);
+    }
+
+    private FilePath downloadProjectEnvCliArchive(FilePath targetDirectory) throws Exception {
         String archiveUrl = createProjectEnvCliArchiveUrl();
         String archiveFilename = FilenameUtils.getName(archiveUrl);
 
-        File targetFile = new File(targetDirectory, archiveFilename);
-        downloadArchive(archiveUrl, targetFile);
+        FilePath targetFile = targetDirectory.child(archiveFilename);
+        targetFile.copyFrom(new URI(archiveUrl).toURL());
 
         return targetFile;
     }
 
-    private String createProjectEnvCliArchiveUrl() {
-        DownloadUrlDictionary dictionary = ImmutableDownloadUrlDictionary.builder()
-                .putParameters("VERSION", cliVersion)
-                .putOperatingSystemSpecificParameters(
-                        "OS",
-                        createMapOf(
-                                OperatingSystem.MACOS, "macos",
-                                OperatingSystem.LINUX, "linux",
-                                OperatingSystem.WINDOWS, "windows"
-                        )
-                )
-                .putOperatingSystemSpecificParameters(
-                        "FILE_EXT",
-                        createMapOf(
-                                OperatingSystem.MACOS, "tar.gz",
-                                OperatingSystem.LINUX, "tar.gz",
-                                OperatingSystem.WINDOWS, "zip"
-                        )
-                )
-                .putCPUArchitectureSpecificParameters(
-                        "CPU_ARCH",
-                        createMapOf(
-                                CPUArchitecture.X64, "amd64"
-                        )
-                )
-                .build();
+    private String createProjectEnvCliArchiveUrl() throws Exception {
+        String cliTargetOs = getCliTargetOs();
+        String cliArchiveExtension = getCliArchiveExtension();
+        String cliTargetArchitecture = getCliTargetArchitecture();
 
-        return DownloadUrlSubstitutorFactory
-                .createDownloadUrlVariableSubstitutor(dictionary)
-                .replace("https://github.com/Project-Env/project-env-core/releases/download/v${VERSION}/cli-${VERSION}-${OS}-${CPU_ARCH}.${FILE_EXT}");
+        return MessageFormat.format(PROJECT_ENV_CLI_DOWNLOAD_PATTERN, cliVersion, cliTargetOs, cliTargetArchitecture, cliArchiveExtension);
     }
 
-    private <K, V> Map<K, V> createMapOf(K k1, V v1) {
-        Map<K, V> map = new HashMap<>();
-        map.put(k1, v1);
-        return map;
-    }
-
-    private <K, V> Map<K, V> createMapOf(K k1, V v1, K k2, V v2, K k3, V v3) {
-        Map<K, V> map = new HashMap<>();
-        map.put(k1, v1);
-        map.put(k2, v2);
-        map.put(k3, v3);
-        return map;
-    }
-
-    private void downloadArchive(String downloadUrl, File target) throws IOException, URISyntaxException {
-        try (ReadableByteChannel inputChannel = Channels.newChannel(new URI(downloadUrl).toURL().openStream());
-             FileChannel outputChannel = new FileOutputStream(target).getChannel()) {
-
-            outputChannel.transferFrom(inputChannel, 0, Long.MAX_VALUE);
+    private String getCliTargetOs() throws Exception {
+        OperatingSystem operatingSystem = StepContextHelper.getOperatingSystem(getContext());
+        switch (operatingSystem) {
+            case WINDOWS:
+                return CLI_TARGET_OS_WINDOWS;
+            case MACOS:
+                return CLI_TARGET_OS_MACOS;
+            case LINUX:
+                return CLI_TARGET_OS_LINUX;
+            default:
+                throw new IllegalArgumentException("unexpected value " + operatingSystem + " received");
         }
     }
 
-    private void extractProjectEnvCliArchive(File archive, File target) throws IOException {
-        ArchiveExtractorFactory.createArchiveExtractor().extractArchive(archive, target);
+    private String getCliArchiveExtension() throws Exception {
+        OperatingSystem operatingSystem = StepContextHelper.getOperatingSystem(getContext());
+        switch (operatingSystem) {
+            case WINDOWS:
+                return CLI_ARCHIVE_EXTENSION_ZIP;
+            case MACOS:
+            case LINUX:
+                return CLI_ARCHIVE_EXTENSION_TAR_GZ;
+            default:
+                throw new IllegalArgumentException("unexpected value " + operatingSystem + " received");
+        }
     }
 
-    private File resolveProjectEnvCliExecutable(File sourceDirectory) {
-        String executableFilename = "project-env-cli" + getExecutableExtension();
-        File executable = new File(sourceDirectory, executableFilename);
+    private String getCliTargetArchitecture() {
+        return CLI_TARGET_ARCH_AMD_64;
+    }
+
+    private void extractProjectEnvCliArchive(FilePath archive, FilePath target) throws Exception {
+        if (StringUtils.endsWith(archive.getName(), CLI_ARCHIVE_EXTENSION_TAR_GZ)) {
+            archive.untar(target, FilePath.TarCompression.GZIP);
+        } else {
+            archive.unzip(target);
+        }
+    }
+
+    private FilePath resolveProjectEnvCliExecutable(FilePath sourceDirectory) throws Exception {
+        String executableFilename = CLI_EXECUTABLE_FILE_NAME + getExecutableExtension();
+        FilePath executable = sourceDirectory.child(executableFilename);
         if (!executable.exists()) {
             throw new IllegalStateException("could not find Project-Env CLI at " + executable);
         }
@@ -153,22 +155,37 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         return executable;
     }
 
-    private String getExecutableExtension() {
-        return OperatingSystem.getCurrentOperatingSystem() == OperatingSystem.WINDOWS ? ".exe" : "";
+    private String getExecutableExtension() throws Exception {
+        return StepContextHelper.getOperatingSystem(getContext()) == OperatingSystem.WINDOWS ?
+                CLI_EXECUTABLE_FILE_EXTENSION_WINDOWS : CLI_EXECUTABLE_FILE_EXTENSION_OTHERS;
     }
 
-    private Map<String, List<ToolInfo>> executeProjectEnvCli(File executable) throws IOException {
-        List<String> commands = new ArrayList<>();
-        commands.add(executable.getAbsolutePath());
-        commands.add("--config-file=project-env.toml");
-        if (cliDebug) {
-            commands.add("--debug");
+    private Map<String, List<ToolInfo>> executeProjectEnvCli(FilePath executable) throws Exception {
+        List<String> commands = createProjectEnvCliCommand(executable);
+        FilePath workspace = StepContextHelper.getWorkspace(getContext());
+
+        ProcStarter procStarter = StepContextHelper.getOrThrow(getContext(), Launcher.class)
+                .launch()
+                .cmds(commands)
+                .pwd(workspace);
+
+        ProcResult procResult = ProcHelper.executeAndReturnStdOut(procStarter, getContext());
+        if (procResult.getExitCode() != 0) {
+            throw new IllegalStateException("received non-zero exit code from Project-Env CLI");
         }
 
-        ProcessBuilder processBuilder = new ProcessBuilder(commands);
-        ProcessResult processResult = ProcessHelper.executeProcess(processBuilder, true);
+        return ToolInfoParser.fromJson(procResult.getStdOutput());
+    }
 
-        return ToolInfoParser.fromJson(processResult.getStdOutput().orElse(null));
+    private List<String> createProjectEnvCliCommand(FilePath executable) {
+        List<String> command = new ArrayList<>();
+        command.add(executable.getRemote());
+        command.add("--config-file=" + configFile);
+        if (cliDebug) {
+            command.add("--debug");
+        }
+
+        return command;
     }
 
     private EnvVars processToolInfos(Map<String, List<ToolInfo>> allToolInfos) {
@@ -176,43 +193,30 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
 
         for (Map.Entry<String, List<ToolInfo>> entry : allToolInfos.entrySet()) {
             for (ToolInfo toolInfo : entry.getValue()) {
-                List<File> pathElements = toolInfo.getPathElements();
+                List<String> pathElements = toolInfo.getPathElements();
                 for (int i = 0; i < pathElements.size(); i++) {
-                    File pathElement = pathElements.get(i);
+                    String pathElement = pathElements.get(i);
 
-                    envVars.put("PATH+" + StringUtils.upperCase(entry.getKey()) + "_" + i, pathElement.getAbsolutePath());
+                    envVars.put("PATH+" + StringUtils.upperCase(entry.getKey()) + "_" + i, pathElement);
                 }
 
-                Map<String, File> environmentVariables = toolInfo.getEnvironmentVariables();
-                for (Map.Entry<String, File> environmentVariableEntry : environmentVariables.entrySet()) {
-                    envVars.put(environmentVariableEntry.getKey(), environmentVariableEntry.getValue().getAbsolutePath());
-                }
+                envVars.putAll(toolInfo.getEnvironmentVariables());
             }
         }
 
         return envVars;
     }
 
-    private BodyExecutionCallback createTempDirectoryCleanupCallback(File tempDirectory) {
+    private BodyExecutionCallback createTempDirectoryCleanupCallback(FilePath tempDirectory) {
         return new TailCall() {
-
             @Override
             protected void finished(StepContext context) throws Exception {
-                deleteTempDirectory();
+                tempDirectory.deleteRecursive();
             }
-
-            private void deleteTempDirectory() {
-                try {
-                    FileUtils.forceDelete(tempDirectory);
-                } catch (IOException e) {
-                    LOGGER.warning("failed to delete Project-Env temp directory " + tempDirectory.getAbsolutePath());
-                }
-            }
-
         };
     }
 
-    private void invokeBodyWithEnvVarsAndCallback(EnvVars projectEnvVars, BodyExecutionCallback callback) throws IOException, InterruptedException {
+    private void invokeBodyWithEnvVarsAndCallback(EnvVars projectEnvVars, BodyExecutionCallback callback) throws Exception {
         getContext()
                 .newBodyInvoker()
                 .withContexts(createEnvironmentExpander(projectEnvVars))
@@ -220,7 +224,7 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
                 .start();
     }
 
-    private EnvironmentExpander createEnvironmentExpander(EnvVars projectEnvVars) throws IOException, InterruptedException {
+    private EnvironmentExpander createEnvironmentExpander(EnvVars projectEnvVars) throws Exception {
         return EnvironmentExpander
                 .merge(getContext().get(EnvironmentExpander.class), new EnvironmentExpander() {
                     @Override

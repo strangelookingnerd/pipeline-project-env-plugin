@@ -1,7 +1,8 @@
-package io.jenkins.plugins.projectenv;
+package io.jenkins.plugins.projectenv.toolinfo;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import io.projectenv.commons.gson.GsonFactory;
 
 import java.lang.reflect.Type;
 import java.util.List;
@@ -17,7 +18,11 @@ public final class ToolInfoParser {
     }
 
     public static Map<String, List<ToolInfo>> fromJson(String rawToolInfos) {
-        return GsonFactory.createGson().fromJson(rawToolInfos, TOOL_INFOS_TYPE);
+        return createGson().fromJson(rawToolInfos, TOOL_INFOS_TYPE);
+    }
+
+    public static Gson createGson() {
+        return new GsonBuilder().registerTypeAdapterFactory(new GsonAdaptersToolInfo()).create();
     }
 
 }

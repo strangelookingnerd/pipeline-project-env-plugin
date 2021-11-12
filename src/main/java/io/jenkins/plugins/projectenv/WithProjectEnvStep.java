@@ -16,6 +16,7 @@ public class WithProjectEnvStep extends Step {
 
     private final String cliVersion;
     private boolean cliDebug;
+    private String configFile = "project-env.toml";
 
     @DataBoundConstructor
     public WithProjectEnvStep(String cliVersion) {
@@ -27,9 +28,14 @@ public class WithProjectEnvStep extends Step {
         this.cliDebug = cliDebug;
     }
 
+    @DataBoundSetter
+    public void setConfigFile(String configFile) {
+        this.configFile = configFile;
+    }
+
     @Override
     public StepExecution start(StepContext stepContext) throws Exception {
-        return new WithProjectEnvStepExecution(stepContext, cliVersion, cliDebug);
+        return new WithProjectEnvStepExecution(stepContext, cliVersion, cliDebug, configFile);
     }
 
     @Extension
