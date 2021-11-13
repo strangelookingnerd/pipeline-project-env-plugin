@@ -1,6 +1,6 @@
 # Pipeline Project-Env Plugin
 
-This plugin allows you to use Project-Env within Jenkins pipelines. See https://project-env.github.io for more details.
+This plugin allows you to use Project-Env within Jenkins pipelines. See [Project-Env](https://project-env.github.io/) for more details.
 
 ## Usage
 
