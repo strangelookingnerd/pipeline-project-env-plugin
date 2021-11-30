@@ -1,8 +1,10 @@
 # Pipeline Project-Env Plugin
 
+## Introduction
+
 This plugin allows you to use Project-Env within Jenkins pipelines. See [Project-Env](https://project-env.github.io/) for more details.
 
-## Usage
+## Getting started
 
 ```groovy
 node {
@@ -27,4 +29,12 @@ node {
     }
 }
 ```
+
+## Contributing
+
+See [contribution guidelines](https://github.com/jenkinsci/.github/blob/master/CONTRIBUTING.md)
+
+## Changelog
+
+See [changelog](./CHANGELOG)
 

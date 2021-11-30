@@ -1,0 +1,2 @@
+_extends: .github
+tag-template: pipeline-project-env-$NEXT_MINOR_VERSION
