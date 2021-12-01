@@ -3,6 +3,7 @@ package io.jenkins.plugins.projectenv;
 import hudson.model.Label;
 import hudson.model.Result;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -33,10 +34,10 @@ public class WithProjectEnvStepTest {
         String projectEnvConfigFileContent = readTestResource("project-env.toml");
 
         WorkflowJob project = jenkins.createProject(WorkflowJob.class);
-        project.setDefinition(new CpsFlowDefinition("" +
+        project.setDefinition(createOsSpecificPipelineDefinition("" +
                 "node('slave') {\n" +
                 "  writeFile text: '''" + projectEnvConfigFileContent + "''', file: 'project-env.toml'\n" +
-                "  withProjectEnv(cliVersion: '3.4.0', cliDebug: true) {\n" +
+                "  withProjectEnv(cliVersion: '3.4.1', cliDebug: true) {\n" +
                 "    sh 'java -version'\n" +
                 "    sh 'native-image --version'\n" +
                 "    sh 'mvn --version'\n" +
@@ -44,23 +45,23 @@ public class WithProjectEnvStepTest {
                 "    sh 'node --version'\n" +
                 "    sh 'yarn --version'\n" +
                 "  }\n" +
-                "}", true));
+                "}"));
 
         WorkflowRun run = jenkins.assertBuildStatus(Result.SUCCESS, project.scheduleBuild2(0));
         assertThat(run.getLog())
                 // assert that the JDK (including native-image)  has been installed
                 .contains("installing jdk...")
-                .contains("openjdk version \"11.0.9\" 2020-10-20")
-                .contains("GraalVM Version 20.3.0 (Java Version 11.0.9+10-jvmci-20.3-b06)")
+                .contains("openjdk version \"17.0.1\" 2021-10-19")
+                .contains("GraalVM 21.3.0 Java 17 CE (Java Version 17.0.1+12-jvmci-21.3-b05)")
                 // assert that Maven has been installed
                 .contains("installing maven...")
-                .contains("Apache Maven 3.6.3 (cecedd343002696d0abb50b32b541b8a6ba2883f)")
+                .contains("Apache Maven 3.8.4 (9b656c72d54e5bacbed989b64718c159fe39b537)")
                 // assert that Gradle has been installed
                 .contains("installing gradle...")
-                .contains("Gradle 6.7.1")
+                .contains("Gradle 7.3")
                 // assert that NodeJS (including yarn) has been installed
                 .contains("installing nodejs...")
-                .contains("v14.15.3")
+                .contains("v17.2.0")
                 .contains("1.22.17");
     }
 
@@ -70,12 +71,12 @@ public class WithProjectEnvStepTest {
         String projectEnvConfigFileContent = readTestResource("project-env-empty.toml");
 
         WorkflowJob project = jenkins.createProject(WorkflowJob.class);
-        project.setDefinition(new CpsFlowDefinition("" +
+        project.setDefinition(createOsSpecificPipelineDefinition("" +
                 "node('slave') {\n" +
                 "  writeFile text: '" + projectEnvConfigFileContent + "', file: 'etc/project-env.toml'\n" +
-                "  withProjectEnv(cliVersion: '3.4.0', cliDebug: true, configFile: 'etc/project-env.toml') {\n" +
+                "  withProjectEnv(cliVersion: '3.4.1', cliDebug: true, configFile: 'etc/project-env.toml') {\n" +
                 "  }\n" +
-                "}", true));
+                "}"));
 
         jenkins.assertBuildStatus(Result.SUCCESS, project.scheduleBuild2(0));
     }
@@ -84,11 +85,11 @@ public class WithProjectEnvStepTest {
     @WithTimeout(600)
     public void testStepExecutionWithNonExistingConfigFile() throws Exception {
         WorkflowJob project = jenkins.createProject(WorkflowJob.class);
-        project.setDefinition(new CpsFlowDefinition("" +
+        project.setDefinition(createOsSpecificPipelineDefinition("" +
                 "node('slave') {\n" +
-                "  withProjectEnv(cliVersion: '3.4.0', cliDebug: true) {\n" +
+                "  withProjectEnv(cliVersion: '3.4.1', cliDebug: true) {\n" +
                 "  }\n" +
-                "}", true));
+                "}"));
 
         WorkflowRun run = jenkins.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
         assertThat(run.getLog()).contains("failed to install tools: FileNotFoundException");
@@ -96,6 +97,12 @@ public class WithProjectEnvStepTest {
 
     private String readTestResource(String resource) throws IOException {
         return IOUtils.toString(getClass().getResource(resource), StandardCharsets.UTF_8);
+    }
+
+    private CpsFlowDefinition createOsSpecificPipelineDefinition(String pipelineDefinition) {
+        return new CpsFlowDefinition(SystemUtils.IS_OS_WINDOWS ?
+                pipelineDefinition.replace("sh", "bat") :
+                pipelineDefinition, true);
     }
 
 }
