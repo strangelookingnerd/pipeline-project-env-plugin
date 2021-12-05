@@ -2,7 +2,6 @@ package io.jenkins.plugins.projectenv.proc;
 
 import hudson.Launcher.ProcStarter;
 import hudson.Proc;
-import hudson.model.TaskListener;
 import io.jenkins.plugins.projectenv.context.StepContextHelper;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
@@ -42,7 +41,7 @@ public final class ProcHelper {
     }
 
     private static Thread attachStdErrLoggingThread(InputStream stdErrInputStream, StepContext context) throws Exception {
-        PrintStream logger = StepContextHelper.getOrThrow(context, TaskListener.class).getLogger();
+        PrintStream logger = StepContextHelper.getTaskListener(context).getLogger();
 
         Thread thread = new Thread(() -> {
             try (Scanner scanner = new Scanner(stdErrInputStream, StandardCharsets.UTF_8.name())) {
