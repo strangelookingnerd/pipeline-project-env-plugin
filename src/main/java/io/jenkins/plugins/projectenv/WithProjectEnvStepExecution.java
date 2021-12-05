@@ -171,7 +171,7 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
 
         ProcResult procResult = ProcHelper.executeAndReturnStdOut(procStarter, getContext());
         if (procResult.getExitCode() != 0) {
-            throw new IllegalStateException("received non-zero exit code from Project-Env CLI");
+            throw new IllegalStateException("received non-zero exit code " + procResult.getExitCode() + " from Project-Env CLI");
         }
 
         return ToolInfoParser.fromJson(procResult.getStdOutput());
