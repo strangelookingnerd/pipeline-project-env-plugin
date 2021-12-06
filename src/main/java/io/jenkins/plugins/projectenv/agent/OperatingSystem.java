@@ -1,4 +1,4 @@
-package io.jenkins.plugins.projectenv.context;
+package io.jenkins.plugins.projectenv.agent;
 
 public enum OperatingSystem {
     WINDOWS, MACOS, LINUX

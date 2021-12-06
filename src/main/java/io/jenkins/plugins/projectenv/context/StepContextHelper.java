@@ -1,18 +1,26 @@
 package io.jenkins.plugins.projectenv.context;
 
 import hudson.FilePath;
+import hudson.Launcher;
 import hudson.model.Computer;
+import hudson.model.TaskListener;
 import hudson.slaves.WorkspaceList;
-import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import java.util.Optional;
 
 public class StepContextHelper {
 
-    public static <T> T getOrThrow(StepContext stepContext, Class<T> type) throws Exception {
-        return Optional.ofNullable(stepContext.get(type))
-                .orElseThrow(() -> new IllegalStateException("failed to resolve " + type.getSimpleName() + " from context"));
+    public static Computer getComputer(StepContext stepContext) throws Exception {
+        return getOrThrow(stepContext, Computer.class);
+    }
+
+    public static Launcher getLauncher(StepContext stepContext) throws Exception {
+        return getOrThrow(stepContext, Launcher.class);
+    }
+
+    public static TaskListener getTaskListener(StepContext stepContext) throws Exception {
+        return getOrThrow(stepContext, TaskListener.class);
     }
 
     public static FilePath getWorkspace(StepContext stepContext) throws Exception {
@@ -31,18 +39,9 @@ public class StepContextHelper {
                 .orElseThrow(() -> new IllegalStateException("failed to resolve temporary directory from context"));
     }
 
-    public static OperatingSystem getOperatingSystem(StepContext context) throws Exception {
-        Computer computer = StepContextHelper.getOrThrow(context, Computer.class);
-        if (Boolean.FALSE.equals(computer.isUnix())) {
-            return OperatingSystem.WINDOWS;
-        }
-
-        String path = computer.getEnvironment().get("PATH");
-        if (StringUtils.contains(path, "/Library/Apple")) {
-            return OperatingSystem.MACOS;
-        }
-
-        return OperatingSystem.LINUX;
+    private static <T> T getOrThrow(StepContext stepContext, Class<T> type) throws Exception {
+        return Optional.ofNullable(stepContext.get(type))
+                .orElseThrow(() -> new IllegalStateException("failed to resolve " + type.getSimpleName() + " from context"));
     }
 
 }

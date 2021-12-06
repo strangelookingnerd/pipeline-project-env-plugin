@@ -2,10 +2,11 @@ package io.jenkins.plugins.projectenv;
 
 import hudson.EnvVars;
 import hudson.FilePath;
-import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.Util;
-import io.jenkins.plugins.projectenv.context.OperatingSystem;
+import io.jenkins.plugins.projectenv.agent.AgentInfo;
+import io.jenkins.plugins.projectenv.agent.AgentInfoCallable;
+import io.jenkins.plugins.projectenv.agent.OperatingSystem;
 import io.jenkins.plugins.projectenv.context.StepContextHelper;
 import io.jenkins.plugins.projectenv.proc.ProcHelper;
 import io.jenkins.plugins.projectenv.proc.ProcResult;
@@ -63,18 +64,24 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
     }
 
     private void execute() throws Exception {
+        AgentInfo agentInfo = getAgentInfo();
+
         FilePath temporaryDirectory = createTemporaryDirectory();
 
-        FilePath projectEnvCliArchive = downloadProjectEnvCliArchive(temporaryDirectory);
+        FilePath projectEnvCliArchive = downloadProjectEnvCliArchive(agentInfo, temporaryDirectory);
         extractProjectEnvCliArchive(projectEnvCliArchive, temporaryDirectory);
 
-        FilePath executable = resolveProjectEnvCliExecutable(temporaryDirectory);
+        FilePath executable = resolveProjectEnvCliExecutable(agentInfo, temporaryDirectory);
         Map<String, List<ToolInfo>> allToolInfos = executeProjectEnvCli(executable);
 
         EnvVars projectEnvVars = processToolInfos(allToolInfos);
         BodyExecutionCallback callback = createTempDirectoryCleanupCallback(temporaryDirectory);
 
         invokeBodyWithEnvVarsAndCallback(projectEnvVars, callback);
+    }
+
+    private AgentInfo getAgentInfo() throws Exception {
+        return StepContextHelper.getComputer(getContext()).getChannel().call(new AgentInfoCallable());
     }
 
     private FilePath createTemporaryDirectory() throws Exception {
@@ -88,8 +95,8 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         return "withProjectEnv" + Util.getDigestOf(UUID.randomUUID().toString()).substring(0, 8);
     }
 
-    private FilePath downloadProjectEnvCliArchive(FilePath targetDirectory) throws Exception {
-        String archiveUrl = createProjectEnvCliArchiveUrl();
+    private FilePath downloadProjectEnvCliArchive(AgentInfo agentInfo, FilePath targetDirectory) throws Exception {
+        String archiveUrl = createProjectEnvCliArchiveUrl(agentInfo);
         String archiveFilename = FilenameUtils.getName(archiveUrl);
 
         FilePath targetFile = targetDirectory.child(archiveFilename);
@@ -98,16 +105,16 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         return targetFile;
     }
 
-    private String createProjectEnvCliArchiveUrl() throws Exception {
-        String cliTargetOs = getCliTargetOs();
-        String cliArchiveExtension = getCliArchiveExtension();
+    private String createProjectEnvCliArchiveUrl(AgentInfo agentInfo) {
+        String cliTargetOs = getCliTargetOs(agentInfo);
+        String cliArchiveExtension = getCliArchiveExtension(agentInfo);
         String cliTargetArchitecture = getCliTargetArchitecture();
 
         return MessageFormat.format(PROJECT_ENV_CLI_DOWNLOAD_PATTERN, cliVersion, cliTargetOs, cliTargetArchitecture, cliArchiveExtension);
     }
 
-    private String getCliTargetOs() throws Exception {
-        OperatingSystem operatingSystem = StepContextHelper.getOperatingSystem(getContext());
+    private String getCliTargetOs(AgentInfo agentInfo) {
+        OperatingSystem operatingSystem = agentInfo.getOperatingSystem();
         switch (operatingSystem) {
             case WINDOWS:
                 return CLI_TARGET_OS_WINDOWS;
@@ -120,8 +127,8 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         }
     }
 
-    private String getCliArchiveExtension() throws Exception {
-        OperatingSystem operatingSystem = StepContextHelper.getOperatingSystem(getContext());
+    private String getCliArchiveExtension(AgentInfo agentInfo) {
+        OperatingSystem operatingSystem = agentInfo.getOperatingSystem();
         switch (operatingSystem) {
             case WINDOWS:
                 return CLI_ARCHIVE_EXTENSION_ZIP;
@@ -145,8 +152,8 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         }
     }
 
-    private FilePath resolveProjectEnvCliExecutable(FilePath sourceDirectory) throws Exception {
-        String executableFilename = CLI_EXECUTABLE_FILE_NAME + getExecutableExtension();
+    private FilePath resolveProjectEnvCliExecutable(AgentInfo agentInfo, FilePath sourceDirectory) throws Exception {
+        String executableFilename = CLI_EXECUTABLE_FILE_NAME + getExecutableExtension(agentInfo);
         FilePath executable = sourceDirectory.child(executableFilename);
         if (!executable.exists()) {
             throw new IllegalStateException("could not find Project-Env CLI at " + executable);
@@ -155,8 +162,8 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         return executable;
     }
 
-    private String getExecutableExtension() throws Exception {
-        return StepContextHelper.getOperatingSystem(getContext()) == OperatingSystem.WINDOWS ?
+    private String getExecutableExtension(AgentInfo agentInfo) {
+        return agentInfo.getOperatingSystem() == OperatingSystem.WINDOWS ?
                 CLI_EXECUTABLE_FILE_EXTENSION_WINDOWS : CLI_EXECUTABLE_FILE_EXTENSION_OTHERS;
     }
 
@@ -164,7 +171,7 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         List<String> commands = createProjectEnvCliCommand(executable);
         FilePath workspace = StepContextHelper.getWorkspace(getContext());
 
-        ProcStarter procStarter = StepContextHelper.getOrThrow(getContext(), Launcher.class)
+        ProcStarter procStarter = StepContextHelper.getLauncher(getContext())
                 .launch()
                 .cmds(commands)
                 .pwd(workspace);
