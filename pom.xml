@@ -28,6 +28,7 @@
     </properties>
 
     <name>Pipeline Project-Env Plugin</name>
+    <description>This plugin allows you to use Project-Env within Jenkins pipelines</description>
     <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
 
     <dependencyManagement>
