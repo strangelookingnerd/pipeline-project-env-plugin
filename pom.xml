@@ -20,10 +20,14 @@
         <changelist>999999-SNAPSHOT</changelist>
 
         <jenkins.version>2.303.2</jenkins.version>
+        <jenkins-tools-bom.artifactId>bom-2.303.x</jenkins-tools-bom.artifactId>
+        <jenkins-tools-bom.version>987.v4ade2e49fe70</jenkins-tools-bom.version>
+
         <java.level>8</java.level>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
 
         <immutable.version>2.8.8</immutable.version>
+        <gson.version>2.8.9</gson.version>
         <assertj-core.version>3.21.0</assertj-core.version>
     </properties>
 
@@ -35,8 +39,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.303.x</artifactId>
-                <version>950.v396cb834de1e</version>
+                <artifactId>${jenkins-tools-bom.artifactId}</artifactId>
+                <version>${jenkins-tools-bom.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -44,6 +48,12 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.immutables</groupId>
             <artifactId>value</artifactId>
@@ -120,14 +130,14 @@
 
     <repositories>
         <repository>
-            <id>repo.jenkins-ci.org</id>
+            <id>public.jenkins-ci.org</id>
             <url>https://repo.jenkins-ci.org/public/</url>
         </repository>
     </repositories>
 
     <pluginRepositories>
         <pluginRepository>
-            <id>repo.jenkins-ci.org</id>
+            <id>public.jenkins-ci.org</id>
             <url>https://repo.jenkins-ci.org/public/</url>
         </pluginRepository>
     </pluginRepositories>
