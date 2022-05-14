@@ -64,7 +64,7 @@ public class WithProjectEnvStepTest {
                 // assert that NodeJS (including yarn) has been installed
                 .contains("installing nodejs...")
                 .contains("v17.2.0")
-                .contains("1.22.17");
+                .contains("1.22.18");
     }
 
     @Test
