@@ -17,12 +17,17 @@ import java.util.Set;
 
 public class WithProjectEnvStep extends Step {
 
-    private final String cliVersion;
+    private String cliVersion;
     private boolean cliDebug;
     private String configFile = "project-env.toml";
 
     @DataBoundConstructor
-    public WithProjectEnvStep(String cliVersion) {
+    public WithProjectEnvStep() {
+        // noop
+    }
+
+    @DataBoundSetter
+    public void setCliVersion(String cliVersion) {
         this.cliVersion = cliVersion;
     }
 
@@ -38,7 +43,11 @@ public class WithProjectEnvStep extends Step {
 
     @Override
     public StepExecution start(StepContext stepContext) throws Exception {
-        return new WithProjectEnvStepExecution(stepContext, cliVersion, cliDebug, configFile);
+        if (cliVersion != null) {
+            return new WithProjectEnvStepExecution(stepContext, cliDebug, configFile, cliVersion);
+        }
+        
+        return new WithProjectEnvStepExecution(stepContext, cliDebug, configFile);
     }
 
     @Extension
