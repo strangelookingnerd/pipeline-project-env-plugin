@@ -38,7 +38,7 @@ public class WithProjectEnvStepTest {
                 "node('slave') {\n" +
                 "  writeFile text: '''" + projectEnvConfigFileContent + "''', file: 'project-env.toml'\n" +
                 "  println \"PATH: ${env.PATH}\"\n" +
-                "  withProjectEnv(cliVersion: '3.4.1', cliDebug: true) {\n" +
+                "  withProjectEnv(cliDebug: true) {\n" +
                 "    println \"PATH: ${env.PATH}\"\n" +
                 "    sh 'java -version'\n" +
                 "    sh 'native-image --version'\n" +
@@ -64,7 +64,7 @@ public class WithProjectEnvStepTest {
                 // assert that NodeJS (including yarn) has been installed
                 .contains("installing nodejs...")
                 .contains("v17.2.0")
-                .contains("1.22.17");
+                .contains("1.22.18");
     }
 
     @Test
