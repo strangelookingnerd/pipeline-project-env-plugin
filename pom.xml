@@ -28,7 +28,7 @@
 
         <immutable.version>2.9.0</immutable.version>
         <gson.version>2.9.0</gson.version>
-        <assertj-core.version>3.22.0</assertj-core.version>
+        <assertj-core.version>3.23.1</assertj-core.version>
     </properties>
 
     <name>Pipeline Project-Env Plugin</name>
