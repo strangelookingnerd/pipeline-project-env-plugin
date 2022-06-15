@@ -15,4 +15,4 @@ version = "7.3"
 
 [nodejs]
 version = "17.2.0"
-post_extraction_commands = ["npm install -g yarn"]
+post_extraction_commands = ["npm install -g yarn@1.22.18"]
