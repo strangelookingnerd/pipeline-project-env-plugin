@@ -1,6 +1,6 @@
 # Pipeline Project-Env Plugin
 
-[![Build Status](https://ci.jenkins.io/job/Plugins/job/pipeline-project-env-plugin/job/master/badge/icon)](https://ci.jenkins.io/job/Plugins/job/pipeline-project-env-plugin/job/master/)
+[![Build Status](https://ci.jenkins.io/job/Plugins/job/pipeline-project-env-plugin/job/main/badge/icon)](https://ci.jenkins.io/job/Plugins/job/pipeline-project-env-plugin/job/master/)
 [![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/pipeline-project-env.svg)](https://plugins.jenkins.io/pipeline-project-env)
 [![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/pipeline-project-env.svg?color=blue)](https://plugins.jenkins.io/pipeline-project-env)
 
