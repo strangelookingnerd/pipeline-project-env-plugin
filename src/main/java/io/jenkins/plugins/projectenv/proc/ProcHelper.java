@@ -15,8 +15,23 @@ public final class ProcHelper {
         // noop
     }
 
-    public static ProcResult executeAndReturnStdOut(ProcStarter procStarter, StepContext context) throws Exception {
+    public static String executeAndGetStdOut(StepContext context, String... commands) throws Exception {
+        ProcResult procResult = execute(context, commands);
+        if (procResult.getExitCode() == 0) {
+            return procResult.getStdOutput();
+        } else {
+            return null;
+        }
+    }
+
+    public static ProcResult execute(StepContext context, String... commands) throws Exception {
         try (ByteArrayOutputStream stdOutInputStream = new ByteArrayOutputStream()) {
+
+            ProcStarter procStarter = StepContextHelper.getLauncher(context)
+                    .launch()
+                    .cmds(commands)
+                    .envs(StepContextHelper.getEnvVars(context))
+                    .pwd(StepContextHelper.getWorkspace(context));
 
             Thread stdErrThread;
             int exitCode;

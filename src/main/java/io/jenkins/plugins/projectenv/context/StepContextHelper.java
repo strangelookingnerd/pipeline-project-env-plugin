@@ -1,5 +1,6 @@
 package io.jenkins.plugins.projectenv.context;
 
+import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Computer;
@@ -17,6 +18,10 @@ public class StepContextHelper {
 
     public static Launcher getLauncher(StepContext stepContext) throws Exception {
         return getOrThrow(stepContext, Launcher.class);
+    }
+
+    public static EnvVars getEnvVars(StepContext stepContext) throws Exception {
+        return getOrThrow(stepContext, EnvVars.class);
     }
 
     public static TaskListener getTaskListener(StepContext stepContext) throws Exception {
