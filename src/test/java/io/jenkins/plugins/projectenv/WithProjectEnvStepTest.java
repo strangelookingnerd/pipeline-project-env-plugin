@@ -46,6 +46,7 @@ public class WithProjectEnvStepTest {
                 "    sh 'gradle --version'\n" +
                 "    sh 'node --version'\n" +
                 "    sh 'yarn --version'\n" +
+                "    sh 'which project-env-cli'\n" +
                 "  }\n" +
                 "}"));
 
@@ -64,7 +65,9 @@ public class WithProjectEnvStepTest {
                 // assert that NodeJS (including yarn) has been installed
                 .contains("installing nodejs...")
                 .contains("v17.2.0")
-                .contains("1.22.18");
+                .contains("1.22.18")
+                // assert that Project-Env CLI is on the PATH
+                .containsPattern("workspace/test\\d+@tmp/withProjectEnv[^/]+/project-env-cli");
     }
 
     @Test

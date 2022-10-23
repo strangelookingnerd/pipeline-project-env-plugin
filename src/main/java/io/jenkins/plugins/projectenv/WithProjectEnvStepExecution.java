@@ -56,6 +56,8 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
 
     private static final String CLI_TARGET_ARCH_AMD_64 = "amd64";
 
+    private static final String PATH_VAR_PREFIX = "PATH+";
+
     private final String fixedCliVersion;
     private final boolean cliDebug;
     private final String configFile;
@@ -73,7 +75,7 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
     }
 
     @Override
-    public boolean start() throws Exception {
+    public boolean start() {
         run(this::execute);
         return false;
     }
@@ -87,9 +89,12 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         extractProjectEnvCliArchive(projectEnvCliArchive, temporaryDirectory);
 
         FilePath executable = resolveProjectEnvCliExecutable(agentInfo, temporaryDirectory);
+
         Map<String, List<ToolInfo>> allToolInfos = executeProjectEnvCli(executable);
 
         EnvVars projectEnvVars = processToolInfos(allToolInfos);
+        projectEnvVars.put(PATH_VAR_PREFIX + "PROJECT_ENV_CLI", temporaryDirectory.getRemote());
+
         BodyExecutionCallback callback = createTempDirectoryCleanupCallback(temporaryDirectory);
 
         invokeBodyWithEnvVarsAndCallback(projectEnvVars, callback);
@@ -255,7 +260,7 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
                 for (int i = 0; i < pathElements.size(); i++) {
                     String pathElement = pathElements.get(i);
 
-                    envVars.put("PATH+" + StringUtils.upperCase(entry.getKey()) + "_" + i, pathElement);
+                    envVars.put(PATH_VAR_PREFIX + StringUtils.upperCase(entry.getKey()) + "_" + i, pathElement);
                 }
 
                 envVars.putAll(toolInfo.getEnvironmentVariables());
