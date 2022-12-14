@@ -2,7 +2,6 @@ package io.jenkins.plugins.projectenv;
 
 import hudson.EnvVars;
 import hudson.FilePath;
-import hudson.Launcher.ProcStarter;
 import hudson.Util;
 import io.jenkins.plugins.projectenv.agent.AgentInfo;
 import io.jenkins.plugins.projectenv.agent.AgentInfoCallable;
@@ -84,20 +83,33 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         AgentInfo agentInfo = getAgentInfo();
 
         FilePath temporaryDirectory = createTemporaryDirectory();
+        EnvVars projectEnvVars = new EnvVars();
 
-        FilePath projectEnvCliArchive = downloadProjectEnvCliArchive(agentInfo, temporaryDirectory);
-        extractProjectEnvCliArchive(projectEnvCliArchive, temporaryDirectory);
+        String executable = resolveProjectEnvCliExecutableFromPath();
+        if (executable == null) {
+            FilePath projectEnvCliArchive = downloadProjectEnvCliArchive(agentInfo, temporaryDirectory);
+            extractProjectEnvCliArchive(projectEnvCliArchive, temporaryDirectory);
 
-        FilePath executable = resolveProjectEnvCliExecutable(agentInfo, temporaryDirectory);
-
+            executable = resolveProjectEnvCliExecutable(agentInfo, temporaryDirectory);
+            projectEnvVars.put(PATH_VAR_PREFIX + "PROJECT_ENV_CLI", temporaryDirectory.getRemote());
+        }
         Map<String, List<ToolInfo>> allToolInfos = executeProjectEnvCli(executable);
-
-        EnvVars projectEnvVars = processToolInfos(allToolInfos);
+        processToolInfos(projectEnvVars, allToolInfos);
         projectEnvVars.put(PATH_VAR_PREFIX + "PROJECT_ENV_CLI", temporaryDirectory.getRemote());
-
+        projectEnvVars.put(PATH_VAR_PREFIX + "PROJECT_ENV_CLI", temporaryDirectory.getRemote());
         BodyExecutionCallback callback = createTempDirectoryCleanupCallback(temporaryDirectory);
-
         invokeBodyWithEnvVarsAndCallback(projectEnvVars, callback);
+    }
+
+    private String resolveProjectEnvCliExecutableFromPath() throws Exception {
+        String executable = getProjectEnvCliExecutableName(getAgentInfo());
+
+        OperatingSystem operatingSystem = getAgentInfo().getOperatingSystem();
+        if (operatingSystem == OperatingSystem.WINDOWS) {
+            return ProcHelper.executeAndGetStdOut(getContext(), "where", executable);
+        } else {
+            return ProcHelper.executeAndGetStdOut(getContext(), "/bin/sh", "-c", "which " + executable);
+        }
     }
 
     private AgentInfo getAgentInfo() throws Exception {
@@ -208,14 +220,18 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         }
     }
 
-    private FilePath resolveProjectEnvCliExecutable(AgentInfo agentInfo, FilePath sourceDirectory) throws Exception {
-        String executableFilename = CLI_EXECUTABLE_FILE_NAME + getExecutableExtension(agentInfo);
+    private String resolveProjectEnvCliExecutable(AgentInfo agentInfo, FilePath sourceDirectory) throws Exception {
+        String executableFilename = getProjectEnvCliExecutableName(agentInfo);
         FilePath executable = sourceDirectory.child(executableFilename);
         if (!executable.exists()) {
             throw new IllegalStateException("could not find Project-Env CLI at " + executable);
         }
 
-        return executable;
+        return executable.getRemote();
+    }
+
+    private String getProjectEnvCliExecutableName(AgentInfo agentInfo) {
+        return CLI_EXECUTABLE_FILE_NAME + getExecutableExtension(agentInfo);
     }
 
     private String getExecutableExtension(AgentInfo agentInfo) {
@@ -223,16 +239,9 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
                 CLI_EXECUTABLE_FILE_EXTENSION_WINDOWS : CLI_EXECUTABLE_FILE_EXTENSION_OTHERS;
     }
 
-    private Map<String, List<ToolInfo>> executeProjectEnvCli(FilePath executable) throws Exception {
-        List<String> commands = createProjectEnvCliCommand(executable);
-        FilePath workspace = StepContextHelper.getWorkspace(getContext());
-
-        ProcStarter procStarter = StepContextHelper.getLauncher(getContext())
-                .launch()
-                .cmds(commands)
-                .pwd(workspace);
-
-        ProcResult procResult = ProcHelper.executeAndReturnStdOut(procStarter, getContext());
+    private Map<String, List<ToolInfo>> executeProjectEnvCli(String executable) throws Exception {
+        String[] commands = createProjectEnvCliCommand(executable);
+        ProcResult procResult = ProcHelper.execute(getContext(), commands);
         if (procResult.getExitCode() != 0) {
             throw new IllegalStateException("received non-zero exit code " + procResult.getExitCode() + " from Project-Env CLI");
         }
@@ -240,20 +249,18 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         return ToolInfoParser.fromJson(procResult.getStdOutput());
     }
 
-    private List<String> createProjectEnvCliCommand(FilePath executable) {
+    private String[] createProjectEnvCliCommand(String executable) {
         List<String> command = new ArrayList<>();
-        command.add(executable.getRemote());
+        command.add(executable);
         command.add("--config-file=" + configFile);
         if (cliDebug) {
             command.add("--debug");
         }
 
-        return command;
+        return command.toArray(new String[0]);
     }
 
-    private EnvVars processToolInfos(Map<String, List<ToolInfo>> allToolInfos) {
-        EnvVars envVars = new EnvVars();
-
+    private void processToolInfos(EnvVars envVars, Map<String, List<ToolInfo>> allToolInfos) {
         for (Map.Entry<String, List<ToolInfo>> entry : allToolInfos.entrySet()) {
             for (ToolInfo toolInfo : entry.getValue()) {
                 List<String> pathElements = toolInfo.getPathElements();
@@ -266,8 +273,6 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
                 envVars.putAll(toolInfo.getEnvironmentVariables());
             }
         }
-
-        return envVars;
     }
 
     private BodyExecutionCallback createTempDirectoryCleanupCallback(FilePath tempDirectory) {
