@@ -15,6 +15,7 @@ node {
     withProjectEnv(
             // The Project-Env CLI version which should be used.
             // If not configured, the latest version will be resolved automatically.
+            // If the Project-Env CLI is already installed, the plugin will use this version instead.
             cliVersion: string,
             // Whether to activate the debug mode in the Project-Env CLI. 
             // If not configured, the debug mode will be deactivated.
