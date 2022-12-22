@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    This plugin allows you to use Project-Env within Jenkins pipelines. See <a href="https://project-env.github.io/">Project-Env</a> for more details.
+</div>

@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.29</version>
+        <version>4.53</version>
         <relativePath/>
     </parent>
 
@@ -19,16 +19,16 @@
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
 
-        <jenkins.version>2.303.2</jenkins.version>
-        <jenkins-tools-bom.artifactId>bom-2.303.x</jenkins-tools-bom.artifactId>
-        <jenkins-tools-bom.version>987.v4ade2e49fe70</jenkins-tools-bom.version>
+        <jenkins.version>2.375.1</jenkins.version>
+        <jenkins-tools-bom.artifactId>bom-2.375.x</jenkins-tools-bom.artifactId>
+        <jenkins-tools-bom.version>1723.vcb_9fee52c9fc</jenkins-tools-bom.version>
 
-        <java.level>8</java.level>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
 
         <immutable.version>2.9.2</immutable.version>
         <gson.version>2.10</gson.version>
         <assertj-core.version>3.23.1</assertj-core.version>
+        <commons-lang3.version>3.12.0</commons-lang3.version>
     </properties>
 
     <name>Pipeline Project-Env Plugin</name>
@@ -53,6 +53,11 @@
             <artifactId>gson</artifactId>
             <version>${gson.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons-lang3.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.immutables</groupId>
@@ -70,6 +75,10 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-step-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkinsci.plugins</groupId>
+            <artifactId>pipeline-model-definition</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
