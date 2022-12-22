@@ -95,20 +95,24 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         }
         Map<String, List<ToolInfo>> allToolInfos = executeProjectEnvCli(executable);
         processToolInfos(projectEnvVars, allToolInfos);
-        projectEnvVars.put(PATH_VAR_PREFIX + "PROJECT_ENV_CLI", temporaryDirectory.getRemote());
-        projectEnvVars.put(PATH_VAR_PREFIX + "PROJECT_ENV_CLI", temporaryDirectory.getRemote());
+
         BodyExecutionCallback callback = createTempDirectoryCleanupCallback(temporaryDirectory);
         invokeBodyWithEnvVarsAndCallback(projectEnvVars, callback);
     }
 
     private String resolveProjectEnvCliExecutableFromPath() throws Exception {
-        String executable = getProjectEnvCliExecutableName(getAgentInfo());
+        String[] commands = getExecutablePathResolveCommand();
 
+        return StringUtils.trimToNull(ProcHelper.executeAndGetStdOut(getContext(), commands));
+    }
+
+    private String[] getExecutablePathResolveCommand() throws Exception {
+        String executable = getProjectEnvCliExecutableName(getAgentInfo());
         OperatingSystem operatingSystem = getAgentInfo().getOperatingSystem();
         if (operatingSystem == OperatingSystem.WINDOWS) {
-            return ProcHelper.executeAndGetStdOut(getContext(), "where", executable);
+            return new String[]{"where", executable};
         } else {
-            return ProcHelper.executeAndGetStdOut(getContext(), "/bin/sh", "-c", "which " + executable);
+            return new String[]{"/bin/sh", "-c", "which " + executable};
         }
     }
 
