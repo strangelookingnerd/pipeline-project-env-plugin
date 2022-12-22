@@ -1,6 +1,6 @@
 # Pipeline Project-Env Plugin
 
-[![Build Status](https://ci.jenkins.io/job/Plugins/job/pipeline-project-env-plugin/job/main/badge/icon)](https://ci.jenkins.io/job/Plugins/job/pipeline-project-env-plugin/job/master/)
+[![Build Status](https://ci.jenkins.io/job/Plugins/job/pipeline-project-env-plugin/job/main/badge/icon)](https://ci.jenkins.io/job/Plugins/job/pipeline-project-env-plugin/job/main/)
 [![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/pipeline-project-env.svg)](https://plugins.jenkins.io/pipeline-project-env)
 [![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/pipeline-project-env.svg?color=blue)](https://plugins.jenkins.io/pipeline-project-env)
 
@@ -15,6 +15,7 @@ node {
     withProjectEnv(
             // The Project-Env CLI version which should be used.
             // If not configured, the latest version will be resolved automatically.
+            // If the Project-Env CLI is already installed, the plugin will use this version instead.
             cliVersion: string,
             // Whether to activate the debug mode in the Project-Env CLI. 
             // If not configured, the debug mode will be deactivated.
