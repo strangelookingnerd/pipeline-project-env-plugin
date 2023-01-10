@@ -1,9 +1,6 @@
 package io.jenkins.plugins.projectenv;
 
-import hudson.EnvVars;
 import hudson.Extension;
-import hudson.Launcher;
-import hudson.model.Computer;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -11,8 +8,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Set;
 
 public class WithProjectEnvStep extends Step {
@@ -46,7 +42,7 @@ public class WithProjectEnvStep extends Step {
         if (cliVersion != null) {
             return new WithProjectEnvStepExecution(stepContext, cliDebug, configFile, cliVersion);
         }
-        
+
         return new WithProjectEnvStepExecution(stepContext, cliDebug, configFile);
     }
 
@@ -55,7 +51,7 @@ public class WithProjectEnvStep extends Step {
 
         @Override
         public Set<? extends Class<?>> getRequiredContext() {
-            return new HashSet<>(Arrays.asList(EnvVars.class, Computer.class, Launcher.class));
+            return Collections.emptySet();
         }
 
         @Override
