@@ -9,6 +9,7 @@ post_extraction_commands = [
 
 [maven]
 version = "3.8.4"
+user_settings_file = "user_settings.xml"
 
 [gradle]
 version = "7.3"

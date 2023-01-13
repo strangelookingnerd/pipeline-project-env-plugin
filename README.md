@@ -10,24 +10,37 @@ This plugin allows you to use Project-Env within Jenkins pipelines. See [Project
 
 ## Getting started
 
+### Declarative pipeline
 ```groovy
-node {
-    withProjectEnv(
-            // The Project-Env CLI version which should be used.
-            // If not configured, the latest version will be resolved automatically.
-            // If the Project-Env CLI is already installed, the plugin will use this version instead.
-            cliVersion: string,
-            // Whether to activate the debug mode in the Project-Env CLI. 
-            // If not configured, the debug mode will be deactivated.
-            cliDebug: boolean,
-            // The path to the Project-Env CLI configuration file. 
-            // If not configured, project-env.toml will be used.
-            configFile: string
-    ) {
+pipeline {
+    agent {
+        // ...
+    }
+    options {
+        withProjectEnv()
+    }
+    stages {
         // ...
     }
 }
 ```
+
+### Scripted pipeline
+```groovy
+node {
+    withProjectEnv() {
+        // ...
+    }
+}
+```
+
+## Parameters
+
+| Name         | Description                                                                                                                                                                                                                              |
+|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `cliVersion` | The Project-Env CLI version which should be used. If not configured, the latest version will be resolved automatically. If the Project-Env CLI is already installed (resolved through `PATH`), the plugin will use this version instead. |
+| `cliDebug`   | Whether to activate the debug mode in the Project-Env CLI. If not configured, the debug mode will be deactivated.                                                                                                                        |
+| `configFile` | The path to the Project-Env CLI configuration file. If not configured, project-env.toml will be used.                                                                                                                                    |
 
 ### Example
 

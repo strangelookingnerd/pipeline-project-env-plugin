@@ -32,17 +32,20 @@ public class WithProjectEnvStepTest {
     @WithTimeout(600)
     public void testStepExecution() throws Exception {
         String projectEnvConfigFileContent = readTestResource("project-env.toml");
+        String userSettingsFileContent = readTestResource("user_settings.xml");
 
         WorkflowJob project = jenkins.createProject(WorkflowJob.class);
         project.setDefinition(createOsSpecificPipelineDefinition("" +
                 "node('slave') {\n" +
                 "  writeFile text: '''" + projectEnvConfigFileContent + "''', file: 'project-env.toml'\n" +
+                "  writeFile text: '''" + userSettingsFileContent + "''', file: 'user_settings.xml'\n" +
                 "  println \"PATH: ${env.PATH}\"\n" +
                 "  withProjectEnv(cliDebug: true) {\n" +
                 "    println \"PATH: ${env.PATH}\"\n" +
                 "    sh 'java -version'\n" +
                 "    sh 'native-image --version'\n" +
                 "    sh 'mvn --version'\n" +
+                "    sh 'mvn help:evaluate -Dexpression=settings.localRepository -q -DforceStdout'\n" +
                 "    sh 'gradle --version'\n" +
                 "    sh 'node --version'\n" +
                 "    sh 'yarn --version'\n" +
@@ -59,6 +62,7 @@ public class WithProjectEnvStepTest {
                 // assert that Maven has been installed
                 .contains("installing maven...")
                 .contains("Apache Maven 3.8.4 (9b656c72d54e5bacbed989b64718c159fe39b537)")
+                .contains("/tmp/m2repo")
                 // assert that Gradle has been installed
                 .contains("installing gradle...")
                 .contains("Gradle 7.3")
