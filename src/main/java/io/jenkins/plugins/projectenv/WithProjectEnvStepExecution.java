@@ -11,6 +11,7 @@ import io.jenkins.plugins.projectenv.proc.ProcHelper;
 import io.jenkins.plugins.projectenv.proc.ProcResult;
 import io.jenkins.plugins.projectenv.toolinfo.ToolInfo;
 import io.jenkins.plugins.projectenv.toolinfo.ToolInfoParser;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
@@ -27,6 +28,7 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +59,9 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
 
     private static final String PATH_VAR_PREFIX = "PATH+";
 
+    private static final String PROJECT_ENV_MAVEN_TOOL_NAME = "maven";
+    private static final String PROJECT_ENV_MAVEN_USER_SETTINGS_FILE = "userSettingsFile";
+
     private final String fixedCliVersion;
     private final boolean cliDebug;
     private final String configFile;
@@ -85,7 +90,7 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         FilePath temporaryDirectory = createTemporaryDirectory();
         EnvVars projectEnvVars = new EnvVars();
 
-        String executable = resolveProjectEnvCliExecutableFromPath();
+        String executable = resolveProjectEnvCliExecutableFromPath(agentInfo);
         if (executable == null) {
             FilePath projectEnvCliArchive = downloadProjectEnvCliArchive(agentInfo, temporaryDirectory);
             extractProjectEnvCliArchive(projectEnvCliArchive, temporaryDirectory);
@@ -94,22 +99,21 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
             projectEnvVars.put(PATH_VAR_PREFIX + "PROJECT_ENV_CLI", temporaryDirectory.getRemote());
         }
         Map<String, List<ToolInfo>> allToolInfos = executeProjectEnvCli(executable);
-        processToolInfos(projectEnvVars, allToolInfos);
+        processToolInfos(projectEnvVars, allToolInfos, agentInfo);
 
         BodyExecutionCallback callback = createTempDirectoryCleanupCallback(temporaryDirectory);
         invokeBodyWithEnvVarsAndCallback(projectEnvVars, callback);
     }
 
-    private String resolveProjectEnvCliExecutableFromPath() throws Exception {
-        String[] commands = getExecutablePathResolveCommand();
+    private String resolveProjectEnvCliExecutableFromPath(AgentInfo agentInfo) throws Exception {
+        String[] commands = getExecutablePathResolveCommand(agentInfo);
 
         return StringUtils.trimToNull(ProcHelper.executeAndGetStdOut(getContext(), commands));
     }
 
-    private String[] getExecutablePathResolveCommand() throws Exception {
-        String executable = getProjectEnvCliExecutableName(getAgentInfo());
-        OperatingSystem operatingSystem = getAgentInfo().getOperatingSystem();
-        if (operatingSystem == OperatingSystem.WINDOWS) {
+    private String[] getExecutablePathResolveCommand(AgentInfo agentInfo) {
+        String executable = getProjectEnvCliExecutableName(agentInfo);
+        if (agentInfo.getOperatingSystem() == OperatingSystem.WINDOWS) {
             return new String[]{"where", executable};
         } else {
             return new String[]{"/bin/sh", "-c", "which " + executable};
@@ -264,7 +268,7 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
         return command.toArray(new String[0]);
     }
 
-    private void processToolInfos(EnvVars envVars, Map<String, List<ToolInfo>> allToolInfos) {
+    private void processToolInfos(EnvVars envVars, Map<String, List<ToolInfo>> allToolInfos, AgentInfo agentInfo) throws Exception {
         for (Map.Entry<String, List<ToolInfo>> entry : allToolInfos.entrySet()) {
             for (ToolInfo toolInfo : entry.getValue()) {
                 List<String> pathElements = toolInfo.getPathElements();
@@ -275,8 +279,35 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
                 }
 
                 envVars.putAll(toolInfo.getEnvironmentVariables());
+
+                if (StringUtils.equals(entry.getKey(), PROJECT_ENV_MAVEN_TOOL_NAME)) {
+                    handleMavenUserSettings(toolInfo, agentInfo);
+                }
             }
         }
+    }
+
+    private void handleMavenUserSettings(ToolInfo toolInfo, AgentInfo agentInfo) throws Exception {
+        String mavenUserSettingsPath = MapUtils.getString(toolInfo.getUnhandledProjectResources(), PROJECT_ENV_MAVEN_USER_SETTINGS_FILE);
+        if (mavenUserSettingsPath != null && agentInfo.getOperatingSystem() == OperatingSystem.LINUX) {
+            FilePath workspace = StepContextHelper.getWorkspace(getContext());
+
+            FilePath primaryExecutable = workspace.child(toolInfo.getPrimaryExecutable().get());
+            FilePath primaryExecutableParent = primaryExecutable.getParent();
+            if (primaryExecutableParent == null) {
+                throw new IllegalStateException();
+            }
+
+            FilePath renamedPrimaryExecutable = primaryExecutableParent.child("_" + primaryExecutable.getName());
+            primaryExecutable.copyToWithPermission(renamedPrimaryExecutable);
+
+            primaryExecutable.write(generateMavenWrapperScript(mavenUserSettingsPath), StandardCharsets.UTF_8.name());
+        }
+    }
+
+    private String generateMavenWrapperScript(String mavenUserSettingsPath) {
+        return "#!/bin/sh\n" +
+                "\"`dirname \"$0\"`/_`basename \"$0\"`\" -s \"" + mavenUserSettingsPath + "\" $*";
     }
 
     private BodyExecutionCallback createTempDirectoryCleanupCallback(FilePath tempDirectory) {
