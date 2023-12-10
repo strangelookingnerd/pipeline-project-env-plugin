@@ -108,7 +108,12 @@ public class WithProjectEnvStepExecution extends GeneralNonBlockingStepExecution
     private String resolveProjectEnvCliExecutableFromPath(AgentInfo agentInfo) throws Exception {
         String[] commands = getExecutablePathResolveCommand(agentInfo);
 
-        return StringUtils.trimToNull(ProcHelper.executeAndGetStdOut(getContext(), commands));
+        String stdOut = StringUtils.trimToNull(ProcHelper.executeAndGetStdOut(getContext(), commands));
+        if (stdOut == null) {
+            return null;
+        }
+
+        return stdOut.split(agentInfo.getLineSeparator())[0];
     }
 
     private String[] getExecutablePathResolveCommand(AgentInfo agentInfo) {

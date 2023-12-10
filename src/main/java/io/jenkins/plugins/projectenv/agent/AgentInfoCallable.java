@@ -9,7 +9,9 @@ public class AgentInfoCallable extends MasterToSlaveCallable<AgentInfo, Exceptio
     public AgentInfo call() throws Exception {
         OperatingSystem operatingSystem = getOperatingSystem();
 
-        return ImmutableAgentInfo.builder().operatingSystem(operatingSystem).build();
+        return ImmutableAgentInfo.builder()
+                .lineSeparator(System.lineSeparator())
+                .operatingSystem(operatingSystem).build();
     }
 
     private OperatingSystem getOperatingSystem() {
