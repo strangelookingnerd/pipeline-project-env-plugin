@@ -9,5 +9,6 @@ import java.io.Serializable;
 public interface AgentInfo extends Serializable {
 
     OperatingSystem getOperatingSystem();
+    String  getLineSeparator();
 
 }

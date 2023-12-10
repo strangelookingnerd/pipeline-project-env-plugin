@@ -57,8 +57,8 @@ public class WithProjectEnvStepTest {
         assertThat(run.getLog())
                 // assert that the JDK (including native-image)  has been installed
                 .contains("installing jdk...")
-                .contains("openjdk version \"17.0.1\" 2021-10-19")
-                .contains("GraalVM 21.3.0 Java 17 CE (Java Version 17.0.1+12-jvmci-21.3-b05)")
+                .contains("openjdk version \"17.0.9\" 2023-10-17")
+                .contains("native-image 17.0.9 2023-10-17")
                 // assert that Maven has been installed
                 .contains("installing maven...")
                 .contains("Apache Maven 3.8.4 (9b656c72d54e5bacbed989b64718c159fe39b537)")
