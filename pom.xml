@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.59</version>
+        <version>4.75</version>
         <relativePath/>
     </parent>
 
@@ -19,14 +19,13 @@
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
 
-        <jenkins.version>2.375.1</jenkins.version>
-        <jenkins-tools-bom.artifactId>bom-2.375.x</jenkins-tools-bom.artifactId>
-        <jenkins-tools-bom.version>1981.v17df70e84a_a_1</jenkins-tools-bom.version>
+        <jenkins.version>2.401.3</jenkins.version>
+        <jenkins-tools-bom.artifactId>bom-2.401.x</jenkins-tools-bom.artifactId>
+        <jenkins-tools-bom.version>2643.vfa_93ff299d20</jenkins-tools-bom.version>
 
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
 
         <immutable.version>2.9.3</immutable.version>
-        <gson.version>2.10.1</gson.version>
         <assertj-core.version>3.24.2</assertj-core.version>
     </properties>
 
@@ -48,16 +47,13 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>${gson.version}</version>
+            <groupId>io.jenkins.plugins</groupId>
+            <artifactId>gson-api</artifactId>
         </dependency>
         <dependency>
             <groupId>io.jenkins.plugins</groupId>
             <artifactId>commons-lang3-api</artifactId>
-            <version>3.12.0-36.vd97de6465d5b_</version>
         </dependency>
-
         <dependency>
             <groupId>org.immutables</groupId>
             <artifactId>value</artifactId>
